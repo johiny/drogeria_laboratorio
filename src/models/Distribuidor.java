@@ -9,7 +9,18 @@ package models;
  * @author parra
  */
 public enum Distribuidor {
-    COFARMA,
-    EMPSEPHAR,
-    CEMEFAR
+    COFARMA("Cofarma"),
+    EMPSEPHAR("Empsephar"),
+    CEMEFAR("Cemefar");
+
+    private final String nombre;
+    
+    Distribuidor(String nombre) {
+        this.nombre = nombre;
+    }
+    
+    @Override
+    public String toString() {
+        return nombre;
+    }
 }

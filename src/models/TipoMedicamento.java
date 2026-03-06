@@ -10,10 +10,21 @@ package models;
  */
 
 public enum TipoMedicamento {
-    ANALGESICO,
-    ANALEPTICO,
-    ANESTESICO,
-    ANTIACIDO,
-    ANTIDEPRESIVO,
-    ANTIBIOTICO
+    ANALGESICO("Analgésico"),
+    ANALEPTICO("Analéptico"),
+    ANESTESICO("Anestésico"),
+    ANTIACIDO("Antiácido"),
+    ANTIDEPRESIVO("Antidepresivo"),
+    ANTIBIOTICO("Antibiótico");
+
+    private final String nombre;
+    
+    TipoMedicamento(String nombre) {
+        this.nombre = nombre;
+    }
+    
+    @Override
+    public String toString() {
+        return nombre;
+    }
 }

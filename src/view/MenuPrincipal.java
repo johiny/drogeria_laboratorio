@@ -1,7 +1,19 @@
+package view;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.plaf.basic.BasicComboBoxUI;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import models.TipoMedicamento;
+import models.Distribuidor;
+import models.Farmacia;
+import controller.PedidoController;
+import handlers.PedidoException;
 
 public class MenuPrincipal extends JFrame {
     private Drogueria drogueria;
@@ -9,7 +21,9 @@ public class MenuPrincipal extends JFrame {
     private JTextField txtCantidad;
     private JComboBox<Object> comboTipo;
     private ButtonGroup grupoDistribuidor;
-    private ButtonGroup grupoSucursal;
+    private Map<JCheckBox, Farmacia> farmaciasCheckboxMap;
+    private PedidoController controller;
+    private JPanel pnlFarmacias; // Panel que contiene los checkboxes de farmacias
 
     // Colores personalizados (Pastel Medicinal)
     public static final Color COLOR_FONDO = new Color(30, 35, 35);
@@ -20,6 +34,8 @@ public class MenuPrincipal extends JFrame {
 
     public MenuPrincipal() {
         drogueria = new Drogueria("Drogueria Paco");
+        controller = new PedidoController();
+        farmaciasCheckboxMap = new HashMap<>();
         
         setTitle(drogueria.getNombre());
         setSize(850, 580);
@@ -72,7 +88,7 @@ public class MenuPrincipal extends JFrame {
         gbc.gridx = 1;
         DefaultComboBoxModel<Object> model = new DefaultComboBoxModel<>();
         model.addElement("Seleccione una opción...");
-        for (Medicamento.Tipo t : Medicamento.Tipo.values()) {
+        for (TipoMedicamento t : TipoMedicamento.values()) {
             model.addElement(t);
         }
         
@@ -125,30 +141,26 @@ public class MenuPrincipal extends JFrame {
         gbc.gridx = 0; gbc.gridy = 3;
         panelCentral.add(crearLabel("Distribuidor Farmacéutico:"), gbc);
         gbc.gridx = 1;
-        // Se cambió el FlowLayout a un GridLayout o se le quitó el hgap exagerado para evitar desbordes
         JPanel pnlDist = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         pnlDist.setOpaque(false);
         grupoDistribuidor = new ButtonGroup();
-        for (Medicamento.Distribuidor d : Medicamento.Distribuidor.values()) {
+        for (Distribuidor d : Distribuidor.values()) {
             JRadioButton rb = crearRadioButton(d.toString(), d.name());
+            // Agregar listener para actualizar farmacias cuando cambie el distribuidor
+            rb.addActionListener(e -> actualizarFarmacias(d));
             grupoDistribuidor.add(rb);
             pnlDist.add(rb);
         }
         panelCentral.add(pnlDist, gbc);
 
-        // Fila 5: Sucursal
+        // Fila 5: Farmacias (dinámico desde el controller según distribuidor seleccionado)
         gbc.gridx = 0; gbc.gridy = 4;
         panelCentral.add(crearLabel("Sucursal de Destino:"), gbc);
         gbc.gridx = 1;
-        JPanel pnlSuc = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        pnlSuc.setOpaque(false);
-        grupoSucursal = new ButtonGroup();
-        for (Medicamento.Sucursal s : Medicamento.Sucursal.values()) {
-            JCheckBox cb = crearCheckBox(s.toString(), s.name());
-            grupoSucursal.add(cb);
-            pnlSuc.add(cb);
-        }
-        panelCentral.add(pnlSuc, gbc);
+        pnlFarmacias = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        pnlFarmacias.setOpaque(false);
+        // Inicialmente vacío hasta que se seleccione un distribuidor
+        panelCentral.add(pnlFarmacias, gbc);
 
         contentPane.add(panelCentral, BorderLayout.CENTER);
 
@@ -226,6 +238,31 @@ public class MenuPrincipal extends JFrame {
         return cb;
     }
 
+    /**
+     * Actualiza el panel de farmacias según el distribuidor seleccionado.
+     * Cada distribuidor tiene sus propias farmacias (principal y secundaria).
+     */
+    private void actualizarFarmacias(Distribuidor distribuidor) {
+        // Limpiar el panel y el mapa
+        pnlFarmacias.removeAll();
+        farmaciasCheckboxMap.clear();
+        
+        // Obtener farmacias del distribuidor seleccionado
+        List<Farmacia> farmaciasDisponibles = controller.getFarmaciasDisponibles(distribuidor);
+        
+        // Crear checkboxes para cada farmacia
+        for (Farmacia farmacia : farmaciasDisponibles) {
+            String displayName = farmacia.isPrincipal() ? "Principal" : "Secundaria";
+            JCheckBox cb = crearCheckBox(displayName, String.valueOf(farmacia.getId()));
+            farmaciasCheckboxMap.put(cb, farmacia);
+            pnlFarmacias.add(cb);
+        }
+        
+        // Refrescar el panel
+        pnlFarmacias.revalidate();
+        pnlFarmacias.repaint();
+    }
+
     // Iconos personalizados para eliminar completamente el renderizado feo del sistema
 
     private class CustomRadioIcon implements Icon {
@@ -298,55 +335,71 @@ public class MenuPrincipal extends JFrame {
     }
 
     private void confirmarPedido() {
+        // Recolectar datos del formulario
         String nombre = txtNombre.getText().trim();
         String cantidadStr = txtCantidad.getText().trim();
-        int selectedIndex = comboTipo.getSelectedIndex();
-        ButtonModel distribuidorSelected = grupoDistribuidor.getSelection();
-        ButtonModel sucursalSelected = grupoSucursal.getSelection();
         
-        java.util.List<String> camposFaltantes = new java.util.ArrayList<>();
-        if (nombre.isEmpty()) camposFaltantes.add("Nombre del medicamento");
-        if (selectedIndex == 0) camposFaltantes.add("Tipo de medicamento");
-        if (cantidadStr.isEmpty()) camposFaltantes.add("Cantidad");
-        if (distribuidorSelected == null) camposFaltantes.add("Distribuidor");
-        if (sucursalSelected == null) camposFaltantes.add("Sucursal");
-
-        if (!camposFaltantes.isEmpty()) {
-            StringBuilder mensajeError = new StringBuilder("ERROR: CAMPOS REQUERIDOS\n");
-            for (String campo : camposFaltantes) {
-                mensajeError.append("* ").append(campo).append("\n");
+        // Obtener tipo seleccionado (puede ser String o TipoMedicamento)
+        Object selectedItem = comboTipo.getSelectedItem();
+        TipoMedicamento tipo = null;
+        if (selectedItem instanceof TipoMedicamento) {
+            tipo = (TipoMedicamento) selectedItem;
+        }
+        
+        // Obtener distribuidor seleccionado
+        ButtonModel distribuidorSelected = grupoDistribuidor.getSelection();
+        Distribuidor distribuidor = null;
+        if (distribuidorSelected != null) {
+            distribuidor = Distribuidor.valueOf(distribuidorSelected.getActionCommand());
+        }
+        
+        // Obtener farmacias seleccionadas
+        List<Farmacia> farmaciasSeleccionadas = new ArrayList<>();
+        for (Map.Entry<JCheckBox, Farmacia> entry : farmaciasCheckboxMap.entrySet()) {
+            if (entry.getKey().isSelected()) {
+                farmaciasSeleccionadas.add(entry.getValue());
             }
-            JOptionPane.showMessageDialog(this, mensajeError.toString(), "Validacion", JOptionPane.ERROR_MESSAGE);
-            return;
         }
-
-        StringBuilder erroresEspecificos = new StringBuilder();
-        if (!nombre.matches("^[a-zA-Z0-9 ]+$")) {
-            erroresEspecificos.append("* El nombre solo permite caracteres alfanuméricos.\n");
-        }
-
-        int cantidad = -1;
+        
+        // Delegar toda la validación al controller
         try {
-            cantidad = Integer.parseInt(cantidadStr);
-            if (cantidad <= 0) {
-                erroresEspecificos.append("* La cantidad debe ser mayor a cero.\n");
-            }
-        } catch (NumberFormatException e) {
-            erroresEspecificos.append("* La cantidad debe ser un número entero.\n");
-        }
-
-        if (erroresEspecificos.length() > 0) {
-            JOptionPane.showMessageDialog(this, "DATOS INVÁLIDOS:\n" + erroresEspecificos.toString(), "Error", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        try {
-            // El usuario solicitó cambiar la confirmación por este texto grande
-            JLabel mensajeGrande = new JLabel("¡Aquí faltan cosas!");
-            mensajeGrande.setFont(new Font("Segoe UI Bold", Font.PLAIN, 40));
-            mensajeGrande.setForeground(COLOR_ACCENT);
+            // Primero validar campos
+            List<String> errores = controller.validarCampos(nombre, tipo, cantidadStr, distribuidor, farmaciasSeleccionadas);
             
-            JOptionPane.showMessageDialog(this, mensajeGrande, "Sistema de Droguería", JOptionPane.PLAIN_MESSAGE);
+            if (!errores.isEmpty()) {
+                // Determinar si son campos requeridos o errores de formato
+                boolean sonCamposRequeridos = errores.stream()
+                    .anyMatch(e -> e.contains("medicamento") || e.contains("Tipo") || 
+                                  e.contains("Cantidad") || e.contains("Distribuidor") || 
+                                  e.contains("Sucursal"));
+                
+                StringBuilder mensajeError = new StringBuilder();
+                if (sonCamposRequeridos) {
+                    mensajeError.append("ERROR: CAMPOS REQUERIDOS\n");
+                } else {
+                    mensajeError.append("DATOS INVÁLIDOS:\n");
+                }
+                
+                for (String error : errores) {
+                    mensajeError.append("* ").append(error).append("\n");
+                }
+                
+                JOptionPane.showMessageDialog(this, 
+                    mensajeError.toString(), 
+                    sonCamposRequeridos ? "Validacion" : "Error", 
+                    sonCamposRequeridos ? JOptionPane.ERROR_MESSAGE : JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            // Si no hay errores, crear el pedido
+            models.Pedido pedido = controller.crearPedido(nombre, tipo, cantidadStr, distribuidor, farmaciasSeleccionadas);
+            
+            // Abrir ventana de resumen (ahora es JFrame)
+            ResumenPedidoView resumenView = new ResumenPedidoView(pedido);
+            resumenView.setVisible(true);
+            
+        } catch (PedidoException e) {
+            JOptionPane.showMessageDialog(this, "ERROR:\n" + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error crítico: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -357,6 +410,11 @@ public class MenuPrincipal extends JFrame {
         txtCantidad.setText("");
         comboTipo.setSelectedIndex(0);
         grupoDistribuidor.clearSelection();
-        grupoSucursal.clearSelection();
+        
+        // Limpiar panel de farmacias
+        pnlFarmacias.removeAll();
+        farmaciasCheckboxMap.clear();
+        pnlFarmacias.revalidate();
+        pnlFarmacias.repaint();
     }
 }

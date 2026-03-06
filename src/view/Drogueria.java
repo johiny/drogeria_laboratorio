@@ -1,3 +1,5 @@
+package view;
+
 import javax.swing.UIManager;
 import javax.swing.SwingUtilities;
 import java.awt.Font;
