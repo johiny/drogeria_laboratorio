@@ -9,28 +9,12 @@ package models;
  * @author parra
  */
 public class Medicamento {
-    private int id;
     private String nombre;
     private TipoMedicamento tipo;
 
-    public Medicamento(int id, String nombre, TipoMedicamento tipo) {
-        this.id = id;
+    public Medicamento(String nombre, TipoMedicamento tipo) {
         this.nombre = nombre;
         this.tipo = tipo;
-    }
-    
-    public Medicamento(int id, String nombre) {
-        this.id = id;
-        this.nombre = nombre;
-        this.tipo = null;
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
     }
 
     public String getNombre() {

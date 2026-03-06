@@ -6,7 +6,7 @@ Sistema de gestión de pedidos farmacéuticos desarrollado en **Java con Swing**
 
 ## 📋 Descripción del Proyecto
 
-Aplicación de escritorio que permite a una farmacia realizar pedidos de medicamentos a distribuidores farmacéuticos. El usuario puede seleccionar el medicamento, la cantidad, el distribuidor y la(s) sucursal(es) de destino. El sistema valida los datos y genera un resumen del pedido.
+Aplicación de escritorio que permite a una farmacia realizar pedidos de medicamentos a distribuidores farmacéuticos. El usuario ingresa el nombre del medicamento, selecciona el tipo, indica la cantidad, elige el distribuidor y la(s) sucursal(es) de destino. El sistema valida los datos y genera un resumen del pedido.
 
 ---
 
@@ -17,85 +17,67 @@ El proyecto sigue el patrón **MVC (Model - View - Controller)** con un paquete 
 ```
 src/
 ├── models/
-│   ├── TipoMedicamento.java     → Enum con los 6 tipos de medicamento
-│   ├── Distribuidor.java        → Enum con los 3 distribuidores disponibles
-│   ├── Medicamento.java         → Entidad medicamento (id, nombre, tipo)
-│   ├── Farmacia.java            → Entidad farmacia (id, nombre, dirección, esPrincipal)
-│   └── Pedido.java              → Entidad pedido (medicamento, distribuidor, farmacias, cantidad)
+│   ├── TipoMedicamento.java     → Enum: ANALGESICO, ANALEPTICO, ANESTESICO,
+│   │                                    ANTIACIDO, ANTIDEPRESIVO, ANTIBIOTICO
+│   ├── Distribuidor.java        → Enum: COFARMA, EMPSEPHAR, CEMEFAR
+│   ├── Medicamento.java         → nombre: String, tipo: TipoMedicamento
+│   ├── Farmacia.java            → id, nombre, direccion, esPrincipal: boolean
+│   └── Pedido.java              → medicamento, distribuidor,
+│                                  farmacias: List<Farmacia>, cantidad: int
 │
 ├── view/
 │   ├── FormularioPedidoView.java → Ventana principal con el formulario
 │   └── ResumenPedidoView.java    → Ventana de confirmación del pedido
 │
 ├── controller/
-│   └── PedidoController.java    → Validación, lógica de negocio y datos sintéticos
+│   └── PedidoController.java    → Validación, lógica de negocio y datos del dominio
 │
 └── handlers/
     ├── PedidoException.java     → Excepción personalizada del dominio
-    └── ErrorHandler.java        → Centraliza la presentación de errores al usuario
+    └── PopUpErrorHandler.java        → Centraliza la presentación de errores
 ```
 
-### Diagrama de relaciones
+### Componentes Swing del formulario
 
-```
-FormularioPedidoView
-        │
-        ▼
-PedidoController ──────────────► PedidoException
-        │                               │
-        ▼                               ▼
-   Pedido                         ErrorHandler
-    ├── Medicamento (TipoMedicamento)
-    ├── Distribuidor
-    ├── List<Farmacia>
-    └── cantidad
-```
+| Campo | Componente | Descripción |
+|-------|-----------|-------------|
+| Nombre medicamento | `JTextField` | El usuario escribe el nombre libremente |
+| Tipo medicamento | `JComboBox` | Desplegable con los 6 tipos del enum |
+| Cantidad | `JTextField` | Número entero positivo |
+| Distribuidor | `JRadioButton x3` | Cofarma, Empsephar, Cemefar |
+| Sucursal | `JCheckBox x2` | Principal y/o Secundaria |
+| Borrar | `JButton` | Limpia todos los campos |
+| Confirmar | `JButton` | Valida y abre ventana de resumen |
 
 ---
 
 ## 🧠 Decisiones de Diseño
 
 ### 1. MVC como arquitectura base
-Se eligió MVC porque Swing es un framework orientado a eventos visuales. Separar la vista del modelo y el controlador permite:
-- Cambiar la UI sin tocar la lógica de negocio
-- Testear validaciones sin levantar ventanas
-- Mantener responsabilidades claras por capa
+Swing es un framework orientado a eventos visuales. MVC permite cambiar la UI sin tocar la lógica de negocio, testear validaciones sin levantar ventanas y mantener responsabilidades claras por capa.
 
-### 2. `Distribuidor` y `TipoMedicamento` como enums
-Ambos representan **dominios cerrados** definidos por el negocio: exactamente 3 distribuidores y exactamente 6 tipos de medicamento. Usar `enum` en vez de `String` garantiza:
-- **Type safety** en tiempo de compilación
-- Imposibilidad de crear valores inválidos
-- Sin necesidad de validación manual de strings
+### 2. Enums para dominios cerrados
+`TipoMedicamento` y `Distribuidor` son enums porque el negocio define exactamente 6 tipos y 3 distribuidores. Garantiza type safety en tiempo de compilación e imposibilidad de crear valores inválidos.
 
-### 3. `Pedido` usa referencias a objetos, no IDs
-```java
-// ❌ Diseño SQL (incorrecto en OOP)
-private int id_medicamento;
-
-// ✅ Diseño OOP (correcto)
-private Medicamento medicamento;
-```
-Java es orientado a objetos. Los objetos se referencian directamente, no por ID. Los IDs son un concepto de bases de datos relacionales, no de objetos en memoria.
+### 3. Referencias a objetos, no IDs
+`Pedido` usa referencias directas a objetos Java, no IDs numéricos. Los IDs son un concepto relacional. En OOP los objetos se referencian directamente en memoria.
 
 ### 4. `List<Farmacia>` en Pedido
-El enunciado permite enviar un pedido a **una o ambas farmacias** simultáneamente. Una lista modela exactamente esa cardinalidad (1 o 2 elementos) sin restricciones artificiales.
+El enunciado permite enviar un pedido a una o ambas farmacias simultáneamente. Una lista modela exactamente esa cardinalidad sin restricciones artificiales.
 
 ### 5. Excepciones de dominio con `PedidoException`
-En vez de retornar `null` cuando la validación falla, el Controller lanza una excepción con mensaje descriptivo. Esto permite:
-- Saber **exactamente qué campo** falló
-- Centralizar la presentación del error en `ErrorHandler`
-- Mantener la View limpia de lógica de validación
+El Controller lanza `PedidoException` con mensaje descriptivo. Esto permite saber exactamente qué campo falló y mantiene la View limpia de lógica de validación.
 
-### 6. Datos sintéticos en el Controller
-Las farmacias y el catálogo de medicamentos viven en el Controller, no en la View. Son datos del dominio del negocio, no de la interfaz. Si el día de mañana se conecta una base de datos, solo se modifica el Controller.
+### 6. Datos del dominio en el Controller
+Las farmacias disponibles viven en el Controller, no en la View. Son datos del negocio. Si en el futuro se conecta una base de datos, solo se modifica el Controller.
 
 ---
 
 ## 📦 Tecnologías
 
-| Tecnología | Versión | Uso |
-|-----------|---------|-----|
-| Java | 8+ | Lenguaje principal |
-| Swing | JDK nativo | Interfaz gráfica |
-| Apache Ant | Nativo NetBeans | Build system |
-| NetBeans IDE | Cualquiera | Entorno de desarrollo |
+| Tecnología | Uso |
+|-----------|-----|
+| Java 8+ | Lenguaje principal |
+| Swing (JDK nativo) | Interfaz gráfica |
+| Apache Ant | Build system (NetBeans) |
+| NetBeans IDE | Entorno de desarrollo |
