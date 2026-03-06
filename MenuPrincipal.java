@@ -19,15 +19,6 @@ public class MenuPrincipal extends JFrame {
     public static final Color COLOR_ACCENT_HOVER = new Color(128, 203, 196);
 
     public MenuPrincipal() {
-        // Personalizar colores globales para los popups (JOptionPane)
-        UIManager.put("OptionPane.background", COLOR_PANEL);
-        UIManager.put("Panel.background", COLOR_PANEL);
-        UIManager.put("OptionPane.messageForeground", COLOR_TEXTO);
-        UIManager.put("Button.background", COLOR_ACCENT);
-        UIManager.put("Button.foreground", COLOR_FONDO);
-        UIManager.put("Button.font", new Font("Segoe UI Bold", Font.PLAIN, 14));
-        UIManager.put("OptionPane.messageFont", new Font("Segoe UI", Font.PLAIN, 15));
-
         drogueria = new Drogueria("Drogueria Paco");
         
         setTitle(drogueria.getNombre());
@@ -39,15 +30,26 @@ public class MenuPrincipal extends JFrame {
     }
 
     private void initComponents() {
-        JPanel contentPane = new JPanel(new BorderLayout(25, 25));
+        JPanel contentPane = new JPanel(new BorderLayout(0, 15));
         contentPane.setBackground(COLOR_FONDO);
-        contentPane.setBorder(new EmptyBorder(40, 40, 40, 40));
+        // Se reduce un poco el borde superior e inferior
+        contentPane.setBorder(new EmptyBorder(25, 40, 25, 40));
         setContentPane(contentPane);
 
-        JLabel lblTitulo = new JLabel("Solicitud de Suministros Medicos", SwingConstants.CENTER);
+        JPanel pnlHeader = new JPanel(new GridLayout(2, 1, 0, 5));
+        pnlHeader.setOpaque(false);
+        
+        JLabel lblTitulo = new JLabel("Pedido de Medicamentos - " + drogueria.getNombre(), SwingConstants.CENTER);
         lblTitulo.setFont(new Font("Segoe UI Semibold", Font.PLAIN, 28));
         lblTitulo.setForeground(COLOR_ACCENT);
-        contentPane.add(lblTitulo, BorderLayout.NORTH);
+        pnlHeader.add(lblTitulo);
+
+        JLabel lblSubtitulo = new JLabel("¡La droguería que sí entrega de verdad!", SwingConstants.CENTER);
+        lblSubtitulo.setFont(new Font("Segoe UI", Font.ITALIC, 16));
+        lblSubtitulo.setForeground(COLOR_TEXTO);
+        pnlHeader.add(lblSubtitulo);
+
+        contentPane.add(pnlHeader, BorderLayout.NORTH);
 
         JPanel panelCentral = new JPanel(new GridBagLayout());
         panelCentral.setBackground(COLOR_PANEL);
@@ -69,7 +71,7 @@ public class MenuPrincipal extends JFrame {
         panelCentral.add(crearLabel("Tipo de Medicamento:"), gbc);
         gbc.gridx = 1;
         DefaultComboBoxModel<Object> model = new DefaultComboBoxModel<>();
-        model.addElement("Seleccione una opcion...");
+        model.addElement("Seleccione una opción...");
         for (Medicamento.Tipo t : Medicamento.Tipo.values()) {
             model.addElement(t);
         }
@@ -121,9 +123,10 @@ public class MenuPrincipal extends JFrame {
 
         // Fila 4: Distribuidor
         gbc.gridx = 0; gbc.gridy = 3;
-        panelCentral.add(crearLabel("Distribuidor Farmaceutico:"), gbc);
+        panelCentral.add(crearLabel("Distribuidor Farmacéutico:"), gbc);
         gbc.gridx = 1;
-        JPanel pnlDist = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 0));
+        // Se cambió el FlowLayout a un GridLayout o se le quitó el hgap exagerado para evitar desbordes
+        JPanel pnlDist = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         pnlDist.setOpaque(false);
         grupoDistribuidor = new ButtonGroup();
         for (Medicamento.Distribuidor d : Medicamento.Distribuidor.values()) {
@@ -137,7 +140,7 @@ public class MenuPrincipal extends JFrame {
         gbc.gridx = 0; gbc.gridy = 4;
         panelCentral.add(crearLabel("Sucursal de Destino:"), gbc);
         gbc.gridx = 1;
-        JPanel pnlSuc = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 0));
+        JPanel pnlSuc = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         pnlSuc.setOpaque(false);
         grupoSucursal = new ButtonGroup();
         for (Medicamento.Sucursal s : Medicamento.Sucursal.values()) {
@@ -153,8 +156,8 @@ public class MenuPrincipal extends JFrame {
         panelBotones.setOpaque(false);
         panelBotones.setBorder(new EmptyBorder(30, 0, 0, 0));
 
-        JButton btnConfirmar = crearBoton("CONFIRMAR PEDIDO");
-        JButton btnBorrar = crearBoton("LIMPIAR FORMULARIO");
+        JButton btnConfirmar = crearBoton("Confirmar");
+        JButton btnBorrar = crearBoton("Borrar");
 
         btnConfirmar.addActionListener(e -> confirmarPedido());
         btnBorrar.addActionListener(e -> borrarCampos());
@@ -319,7 +322,7 @@ public class MenuPrincipal extends JFrame {
 
         StringBuilder erroresEspecificos = new StringBuilder();
         if (!nombre.matches("^[a-zA-Z0-9 ]+$")) {
-            erroresEspecificos.append("* El nombre solo permite caracteres alfanumericos.\n");
+            erroresEspecificos.append("* El nombre solo permite caracteres alfanuméricos.\n");
         }
 
         int cantidad = -1;
@@ -329,25 +332,23 @@ public class MenuPrincipal extends JFrame {
                 erroresEspecificos.append("* La cantidad debe ser mayor a cero.\n");
             }
         } catch (NumberFormatException e) {
-            erroresEspecificos.append("* La cantidad debe ser un numero entero.\n");
+            erroresEspecificos.append("* La cantidad debe ser un número entero.\n");
         }
 
         if (erroresEspecificos.length() > 0) {
-            JOptionPane.showMessageDialog(this, "DATOS INVALIDOS:\n" + erroresEspecificos.toString(), "Error", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "DATOS INVÁLIDOS:\n" + erroresEspecificos.toString(), "Error", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         try {
-            Medicamento.Tipo tipo = (Medicamento.Tipo) Medicamento.Tipo.values()[selectedIndex - 1];
-            String distribuidor = distribuidorSelected.getActionCommand();
-            String sucursal = sucursalSelected.getActionCommand();
-
-            String mensaje = String.format("PEDIDO REGISTRADO CON EXITO\n\nMedicamento: %s\nTipo: %s\nCantidad: %d\nDistribuidor: %s\nSucursal: %s",
-                    nombre, tipo, cantidad, distribuidor, sucursal);
+            // El usuario solicitó cambiar la confirmación por este texto grande
+            JLabel mensajeGrande = new JLabel("¡Aquí faltan cosas!");
+            mensajeGrande.setFont(new Font("Segoe UI Bold", Font.PLAIN, 40));
+            mensajeGrande.setForeground(COLOR_ACCENT);
             
-            JOptionPane.showMessageDialog(this, mensaje, "Sistema de Drogueria", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, mensajeGrande, "Sistema de Droguería", JOptionPane.PLAIN_MESSAGE);
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error critico: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error crítico: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
