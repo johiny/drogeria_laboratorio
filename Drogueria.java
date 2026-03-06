@@ -1,4 +1,3 @@
-import javax.swing.UIManager;
 import javax.swing.SwingUtilities;
 
 public class Drogueria {
@@ -13,14 +12,8 @@ public class Drogueria {
     }
 
     public static void main(String[] args) {
-        // Configurar el Look and Feel del sistema
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // Iniciar la interfaz gráfica
+        // No usaremos el Look and Feel del sistema para que respete los colores oscuros
+        // Iniciar la interfaz gráfica directamente
         SwingUtilities.invokeLater(() -> {
             new MenuPrincipal().setVisible(true);
         });
