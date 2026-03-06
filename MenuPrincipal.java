@@ -28,9 +28,9 @@ public class MenuPrincipal extends JFrame {
         UIManager.put("Button.font", new Font("Segoe UI Bold", Font.PLAIN, 14));
         UIManager.put("OptionPane.messageFont", new Font("Segoe UI", Font.PLAIN, 15));
 
-        drogueria = new Drogueria("Farmacia La Esperanza");
+        drogueria = new Drogueria("Drogueria Paco");
         
-        setTitle("Drogueria - " + drogueria.getNombre());
+        setTitle(drogueria.getNombre());
         setSize(850, 580);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
